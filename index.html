@@ -1,0 +1,1479 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TIMECARD AUTOMATION - HSM</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #775995 0%, #4d2f6b 100%);
+            padding: 20px;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            text-align: center;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+        }
+        .header h1 { color: #775995; margin: 0; font-size: 2em; }
+        .single-card-wrapper {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 25px;
+        }
+        .main-card {
+            background: white;
+            padding: 35px;
+            border-radius: 10px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            width: 100%;
+            max-width: 500px;
+        }
+        .main-card:hover { transform: translateY(-5px); box-shadow: 0 20px 35px rgba(0,0,0,0.2); }
+        .card-icon { 
+            margin-bottom: 15px;
+            width: 80px;
+            height: 80px;
+            margin-left: auto;
+            margin-right: auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .card-icon img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .main-card h3 { font-size: 24px; margin: 10px 0; color: #4a3b6e; }
+        .main-card p { color: #666; font-size: 16px; }
+        .progress-bar {
+            background: #e0e0e0;
+            border-radius: 0px;
+            height: 25px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            background: linear-gradient(90deg, #775995, #4d2f6b);
+            width: 0%;
+            height: 100%;
+            line-height: 25px;
+            color: white;
+            text-align: center;
+            font-size: 12px;
+            transition: width 0.3s;
+        }
+        .logs {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 10px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry { padding: 5px; border-left: 3px solid #667eea; margin: 3px 0; }
+        .log-entry.error { border-left-color: #e74c3c; color: #ff6b6b; }
+        .log-entry.success { border-left-color: #27ae60; color: #6bff9b; }
+        .log-entry.warning { border-left-color: #f39c12; color: #f9ca7f; }
+        .form-group { margin: 15px 0; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; color: #333; }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 14px;
+        }
+        input[type="date"] {
+            cursor: pointer;
+        }
+        input[type="number"] {
+            width: 100%;
+            text-align: left;
+        }
+        .date-row {
+            display: flex;
+            gap: 15px;
+            margin-top: 5px;
+        }
+        .date-field {
+            flex: 1;
+        }
+        .date-field label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+        button:hover { transform: translateY(-2px); }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 25px;
+            border-radius: 15px;
+            max-height: 90%;
+            overflow-y: auto;
+        }
+        .browse-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 10px 0;
+            width: 100%;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .browse-btn:hover {
+            background: #5a67d8;
+            transform: translateY(-1px);
+        }
+        .selected-info {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 8px;
+            font-size: 12px;
+            word-break: break-all;
+            color: #2e7d32;
+        }
+        .preview-table {
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .editable-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .editable-table th {
+            background: #775995;
+            color: white;
+            padding: 10px 8px;
+            border: 1px solid #8a6aa5;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .editable-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .editable-table td:first-child {
+            text-align: left;
+            white-space: nowrap;
+        }
+        .editable-table input {
+            width: 80px;
+            padding: 5px;
+            text-align: center;
+            font-size: 12px;
+        }
+        .editable-table .billed-cell {
+            font-weight: bold;
+            background-color: #f0f8ff;
+        }
+        .found-info {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        h2, h3 {
+            color: #333;
+            margin-top: 0;
+        }
+        .note {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 12px;
+            color: #92400e;
+        }
+        .preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 2000;
+            overflow-y: auto;
+        }
+        .preview-modal-content {
+            background: #f5f5f5;
+            width: 95%;
+            max-width: 1300px;
+            margin: 30px auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+        }
+        .preview-header {
+            background: #775995;
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .preview-header h3 {
+            color: white;
+            margin: 0;
+        }
+        .preview-actions {
+            display: flex;
+            gap: 10px;
+        }
+        .preview-actions button {
+            background: white;
+            color: #775995;
+            margin: 0;
+            padding: 8px 16px;
+        }
+        .preview-actions button:hover {
+            background: #f0f0f0;
+            transform: none;
+        }
+        .preview-body {
+            padding: 20px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background: white;
+        }
+        .print-btn {
+            background: #28a745;
+        }
+        .print-btn:hover {
+            background: #218838;
+        }
+        .close-preview-btn {
+            background: #dc3545;
+        }
+        .close-preview-btn:hover {
+            background: #c82333;
+        }
+        .report-container {
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            background: white;
+            font-family: 'Segoe UI', 'Inter', system-ui, -apple-system, sans-serif;
+            box-shadow: 0 0 20px rgba(0,0,0,0.05);
+        }
+        .report-header-flex {
+            display: flex;
+            justify-content: space-between;
+            align-items: stretch;
+            padding: 20px 25px 12px 25px;
+            border-bottom: 2px solid #775995;
+        }
+        .info-column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .info-row {
+            display: flex;
+            align-items: baseline;
+            gap: 16px;
+            font-size: 13px;
+            line-height: 1.3;
+        }
+        .info-label {
+            font-weight: 700;
+            color: #2d3e50;
+            min-width: 90px;
+            letter-spacing: 0.3px;
+        }
+        .info-value {
+            color: #1f2a3e;
+            font-weight: 500;
+        }
+        .logo-area {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        .logo-img {
+            max-height: 100%;
+            max-width: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+        .table-section {
+            padding: 12px 25px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .timecard-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+        }
+        .timecard-table th {
+            background: #775995;
+            color: white;
+            padding: 10px 8px;
+            font-weight: 600;
+            border: 1px solid #8a6aa5;
+            text-align: center;
+        }
+        .timecard-table td {
+            padding: 9px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            border-left: 1px solid #f0f0f0;
+            border-right: 1px solid #f0f0f0;
+            color: #1e293b;
+            text-align: center;
+        }
+        .timecard-table td:first-child {
+            text-align: left;
+        }
+        .timecard-table tr:hover td {
+            background-color: #faf5ff;
+        }
+        .timecard-table tr:last-child td {
+            border-bottom: 1px solid #cbd5e1;
+        }
+        .summary-section {
+            padding: 12px 25px 20px 25px;
+            display: flex;
+            justify-content: flex-end;
+            background: white;
+        }
+        .summary-card {
+            width: 360px;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 0px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        }
+        .facility-header {
+            background: #775995;
+            color: white;
+            padding: 10px 16px;
+            font-weight: 700;
+            font-size: 12px;
+            text-align: center;
+            letter-spacing: 0.5px;
+        }
+        .facility-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 18px;
+            border-bottom: 1px solid #edf2f7;
+            font-size: 11px;
+            background: #fefefe;
+        }
+        .facility-name {
+            font-weight: 700;
+            color: #1f2a3e;
+        }
+        .facility-detail {
+            color: #4b5563;
+            display: flex;
+            gap: 20px;
+        }
+        .facility-detail span {
+            min-width: 60px;
+            text-align: right;
+        }
+        .total-block {
+            padding: 12px 18px;
+            background: #fafcff;
+            border-top: 2px solid #775995;
+            margin-top: 4px;
+        }
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            font-size: 11px;
+        }
+        .summary-label {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0 4px 0;
+            font-weight: 800;
+            font-size: 13px;
+            color: #1e293b;
+            border-top: 1px dashed #cbd5e1;
+            margin-top: 6px;
+        }
+        .facility-table-container {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border: 1px solid #e2e8f0;
+        }
+        .facility-table-container h4 {
+            margin: 0 0 10px 0;
+            color: #4a3b6e;
+            font-size: 14px;
+        }
+        .facility-input-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .facility-input-table th {
+            background: #775995;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #8a6aa5;
+        }
+        .facility-input-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            background: white;
+        }
+        .facility-input-table input {
+            width: 100px;
+            padding: 6px;
+            text-align: center;
+            font-size: 13px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .facility-input-table .facility-name-cell {
+            font-weight: bold;
+            text-align: left;
+            background: #f5f5f5;
+        }
+        .date-preview {
+            font-size: 11px;
+            color: #666;
+            margin-top: 4px;
+            padding: 4px 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            display: inline-block;
+        }
+        .add-facility-btn {
+            background: #28a745;
+            padding: 6px 12px;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        .delete-facility-btn {
+            background: #dc3545;
+            padding: 4px 8px;
+            font-size: 11px;
+            margin: 0;
+        }
+        @media print {
+            @page {
+                size: Letter;
+                margin: 0.5in 0.5in;
+                zoom: 82%;
+            }
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+                zoom: 82%;
+            }
+            .preview-modal {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: auto;
+                background: white;
+                display: block !important;
+                overflow: visible;
+            }
+            .preview-header, .preview-actions {
+                display: none;
+            }
+            .preview-body {
+                padding: 0;
+                margin: 0;
+                max-height: none;
+                overflow: visible;
+            }
+            .report-container {
+                box-shadow: none;
+                margin: 0 auto;
+                width: 100%;
+                max-width: 100%;
+                page-break-after: avoid;
+                page-break-inside: avoid;
+            }
+            .report-header-flex {
+                padding: 0 0 8px 0;
+            }
+            .info-column {
+                gap: 4px;
+            }
+            .info-row {
+                font-size: 11px;
+                line-height: 1.2;
+                gap: 12px;
+            }
+            .info-label {
+                min-width: 75px;
+            }
+            .logo-area {
+                display: flex;
+                align-items: center;
+                justify-content: flex-end;
+            }
+            .logo-img {
+                max-height: 60px;
+                width: auto;
+                height: auto;
+            }
+            .table-section {
+                padding: 6px 0;
+            }
+            .timecard-table {
+                font-size: 10px;
+            }
+            .timecard-table th {
+                padding: 6px 5px;
+                text-align: center;
+            }
+            .timecard-table td {
+                padding: 6px 5px;
+                text-align: center;
+            }
+            .timecard-table td:first-child {
+                text-align: left;
+            }
+            .summary-section {
+                padding: 6px 0 0 0;
+            }
+            .summary-card {
+                width: 320px;
+            }
+            .facility-header {
+                padding: 6px 12px;
+                font-size: 9.5px;
+            }
+            .facility-item {
+                padding: 5px 12px;
+                font-size: 9px;
+            }
+            .facility-detail {
+                gap: 15px;
+            }
+            .facility-detail span {
+                min-width: 48px;
+            }
+            .total-block {
+                padding: 6px 12px;
+            }
+            .summary-row {
+                padding: 4px 0;
+                font-size: 9px;
+            }
+            .total-row {
+                padding: 6px 0 2px 0;
+                font-size: 10px;
+            }
+            body, .report-container {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+            }
+            .cards, .progress-bar, .logs, .header, .modal, .single-card-wrapper {
+                display: none;
+            }
+            .timecard-table th {
+                background: #775995 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .facility-header {
+                background: #775995 !important;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+        }
+    </style>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>TIMECARD AUTOMATION - HSM</h1>
+            <p>Healthcare Staffing Management Timecard Processor</p>
+            <p style="font-size:12px; margin-top:5px;">✅ Manila Time → US Eastern Time (AM/PM format)</p>
+        </div>
+        
+        <div class="single-card-wrapper">
+            <div class="main-card" onclick="openCombinedModal()">
+                <div class="card-icon">
+                    <img src="img/gen-icon.svg" alt="Generate" onerror="this.style.display='none'; this.parentElement.innerHTML='📊➡️📈';">
+                </div>
+                <h3>Generate Timecard</h3>
+                <p>Upload raw attendance (.xlsx) → Fill employee info → Print Timecard</p>
+                <p style="font-size:12px; color:#667eea; margin-top:10px;">Click to start</p>
+            </div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill">0%</div>
+        </div>
+        <div id="status" style="color:white; margin:5px 0 15px 0;">Ready</div>
+        
+        <div class="logs" id="logs">
+            <div class="log-entry success">✓ System ready</div>
+            <div class="log-entry">✓ Step 1: Click 'Generate Timecard' → Upload raw attendance Excel (.xlsx) file</div>
+            <div class="log-entry">✓ Step 2: Review all rows and edit Break Hours if needed → Click 'Generate Final Report'</div>
+            <div class="log-entry">✓ Step 3: Print or save as PDF (Letter size with normal margins, optimized for 1 page)</div>
+        </div>
+    </div>
+    
+    <div id="combinedModal" class="modal">
+        <div class="modal-content">
+            <h2>📊 Generate Timecard</h2>
+            <div class="form-group">
+                <label>1. Select Source Attendance File (Excel .xlsx):</label>
+                <button class="browse-btn" onclick="selectSourceFileCombined()">📁 Browse for Excel File (.xlsx)</button>
+                <div id="combinedSourceFileName" class="selected-info" style="display:none;"></div>
+                <div id="combinedFoundInfo" class="found-info" style="display:none;"></div>
+                <div id="combinedPreviewData" class="preview-table"></div>
+            </div>
+            <div class="form-group">
+                <label>2. Employee Information:</label>
+                <input type="text" id="combinedEmpName" placeholder="Employee Name" list="empNameHistory" autocomplete="off">
+                <datalist id="empNameHistory"></datalist>
+                
+                <input type="text" id="combinedEmpCode" placeholder="Employee Code" list="empCodeHistory" autocomplete="off">
+                <datalist id="empCodeHistory"></datalist>
+                
+                <input type="text" id="combinedEmpRole" placeholder="Employee Role" list="empRoleHistory" autocomplete="off">
+                <datalist id="empRoleHistory"></datalist>
+                
+                <input type="text" id="combinedClientName" placeholder="Client Name" value="Ocean Healthcare">
+                
+                <input type="number" id="combinedHourlyRate" placeholder="Hourly Rate ($)" step="0.01" list="rateHistory" autocomplete="off">
+                <datalist id="rateHistory"></datalist>
+                
+                <div class="date-row">
+                    <div class="date-field">
+                        <label>Work Period Start Date:</label>
+                        <input type="date" id="combinedStartDate" value="2026-04-01">
+                        <div class="date-preview" id="startDatePreview"></div>
+                    </div>
+                    <div class="date-field">
+                        <label>Work Period End Date:</label>
+                        <input type="date" id="combinedEndDate" value="2026-04-30">
+                        <div class="date-preview" id="endDatePreview"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="facility-table-container">
+                <h4>3. Facility Allocation (Beds & %)</h4>
+                <div style="overflow-x: auto;">
+                    <table class="facility-input-table" id="facilityTable">
+                        <thead>
+                            <tr><th>Facility Name</th><th>Number of Beds</th><th>Allocation Rate (%)</th><th style="width:60px">Action</th></tr>
+                        </thead>
+                        <tbody id="facilityTableBody">
+                            <tr data-facility-id="0">
+                                <td class="facility-name-cell"><input type="text" class="facility-name-input" value="Atlantic Coast" style="width:140px;"></td>
+                                <td><input type="number" class="facility-beds-input" value="167" step="1" style="width:100px;"></td>
+                                <td><input type="number" class="facility-rate-input" value="41" step="1" min="0" max="100" style="width:100px;"></td>
+                                <td><button type="button" class="delete-facility-btn" onclick="deleteFacilityRow(this)">🗑️</button></td>
+                            </tr>
+                            <tr data-facility-id="1">
+                                <td class="facility-name-cell"><input type="text" class="facility-name-input" value="Tower Lodge" style="width:140px;"></td>
+                                <td><input type="number" class="facility-beds-input" value="60" step="1" style="width:100px;"></td>
+                                <td><input type="number" class="facility-rate-input" value="15" step="1" min="0" max="100" style="width:100px;"></td>
+                                <td><button type="button" class="delete-facility-btn" onclick="deleteFacilityRow(this)">🗑️</button></td>
+                            </tr>
+                            <tr data-facility-id="2">
+                                <td class="facility-name-cell"><input type="text" class="facility-name-input" value="Hunterdon" style="width:140px;"></td>
+                                <td><input type="number" class="facility-beds-input" value="178" step="1" style="width:100px;"></td>
+                                <td><input type="number" class="facility-rate-input" value="44" step="1" min="0" max="100" style="width:100px;"></td>
+                                <td><button type="button" class="delete-facility-btn" onclick="deleteFacilityRow(this)">🗑️</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <button type="button" class="add-facility-btn" onclick="addFacilityRow()">+ Add Facility</button>
+                <div id="facilityTotalWarning" style="font-size: 12px; margin-top: 8px; color: #666;"></div>
+            </div>
+            <div class="note">💡 Upload raw attendance Excel file (.xlsx). System will convert to CSV, convert Manila time to EST.<br>💡 You can edit Break Hours directly in the table below. Billed Hours will update automatically.<br>💡 Employee fields remember your history. Select an Employee Name to auto-fill Code, Rate, and Role.<br>💡 Facility allocations are editable - add/delete rows as needed. Total percentage will be calculated automatically.<br>💡 Report optimized for Letter size paper with normal margins - fits perfectly on 1 page.</div>
+            <button onclick="processCombinedAndGenerate()">✅ Generate Final Report</button>
+            <button onclick="closeModal('combinedModal')">❌ Cancel</button>
+        </div>
+    </div>
+    
+    <div id="previewModal" class="preview-modal">
+        <div class="preview-modal-content">
+            <div class="preview-header">
+                <h3>📄 Timecard Report / Client Invoice</h3>
+                <div class="preview-actions">
+                    <button class="print-btn" onclick="printReport()">🖨️ Print / Save as PDF</button>
+                    <button class="close-preview-btn" onclick="closePreviewModal()">✖️ Close</button>
+                </div>
+            </div>
+            <div class="preview-body" id="previewBody"></div>
+        </div>
+    </div>
+    
+    <script>
+        let combinedCleanedData = [];
+        let selectedSourceFileObj = null;
+        let nextFacilityId = 3;
+        
+        const STORAGE_KEYS = {
+            EMP_NAME_HISTORY: 'hsm_emp_names',
+            EMP_DATA: 'hsm_emp_data'
+        };
+        
+        function loadHistory() {
+            const savedNames = localStorage.getItem(STORAGE_KEYS.EMP_NAME_HISTORY);
+            if (savedNames) {
+                const names = JSON.parse(savedNames);
+                const datalist = document.getElementById('empNameHistory');
+                datalist.innerHTML = '';
+                names.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    datalist.appendChild(option);
+                });
+            }
+            
+            const savedData = localStorage.getItem(STORAGE_KEYS.EMP_DATA);
+            if (savedData) {
+                const empDataArray = JSON.parse(savedData);
+                const codeDatalist = document.getElementById('empCodeHistory');
+                const roleDatalist = document.getElementById('empRoleHistory');
+                const rateDatalist = document.getElementById('rateHistory');
+                codeDatalist.innerHTML = '';
+                roleDatalist.innerHTML = '';
+                rateDatalist.innerHTML = '';
+                
+                const uniqueCodes = new Set();
+                const uniqueRoles = new Set();
+                const uniqueRates = new Set();
+                
+                empDataArray.forEach(emp => {
+                    if (emp.code) uniqueCodes.add(emp.code);
+                    if (emp.role) uniqueRoles.add(emp.role);
+                    if (emp.rate) uniqueRates.add(emp.rate);
+                });
+                
+                uniqueCodes.forEach(code => {
+                    const option = document.createElement('option');
+                    option.value = code;
+                    codeDatalist.appendChild(option);
+                });
+                uniqueRoles.forEach(role => {
+                    const option = document.createElement('option');
+                    option.value = role;
+                    roleDatalist.appendChild(option);
+                });
+                uniqueRates.forEach(rate => {
+                    const option = document.createElement('option');
+                    option.value = rate;
+                    rateDatalist.appendChild(option);
+                });
+            }
+        }
+        
+        function saveEmployeeData(name, code, rate, role) {
+            if (!name || name.trim() === '') return;
+            
+            let namesList = localStorage.getItem(STORAGE_KEYS.EMP_NAME_HISTORY);
+            let names = namesList ? JSON.parse(namesList) : [];
+            names = names.filter(n => n !== name);
+            names.unshift(name);
+            if (names.length > 10) names = names.slice(0, 10);
+            localStorage.setItem(STORAGE_KEYS.EMP_NAME_HISTORY, JSON.stringify(names));
+            
+            const datalist = document.getElementById('empNameHistory');
+            datalist.innerHTML = '';
+            names.forEach(n => {
+                const option = document.createElement('option');
+                option.value = n;
+                datalist.appendChild(option);
+            });
+            
+            let empData = localStorage.getItem(STORAGE_KEYS.EMP_DATA);
+            let empArray = empData ? JSON.parse(empData) : [];
+            empArray = empArray.filter(emp => emp.name !== name);
+            empArray.unshift({ name: name, code: code || '', rate: rate || null, role: role || '' });
+            if (empArray.length > 10) empArray = empArray.slice(0, 10);
+            localStorage.setItem(STORAGE_KEYS.EMP_DATA, JSON.stringify(empArray));
+            
+            const codeDatalist = document.getElementById('empCodeHistory');
+            const roleDatalist = document.getElementById('empRoleHistory');
+            const rateDatalist = document.getElementById('rateHistory');
+            const uniqueCodes = new Set();
+            const uniqueRoles = new Set();
+            const uniqueRates = new Set();
+            empArray.forEach(emp => {
+                if (emp.code) uniqueCodes.add(emp.code);
+                if (emp.role) uniqueRoles.add(emp.role);
+                if (emp.rate) uniqueRates.add(emp.rate);
+            });
+            codeDatalist.innerHTML = '';
+            uniqueCodes.forEach(code => {
+                const option = document.createElement('option');
+                option.value = code;
+                codeDatalist.appendChild(option);
+            });
+            roleDatalist.innerHTML = '';
+            uniqueRoles.forEach(role => {
+                const option = document.createElement('option');
+                option.value = role;
+                roleDatalist.appendChild(option);
+            });
+            rateDatalist.innerHTML = '';
+            uniqueRates.forEach(rate => {
+                const option = document.createElement('option');
+                option.value = rate;
+                rateDatalist.appendChild(option);
+            });
+        }
+        
+        function setupAutoFill() {
+            const empNameInput = document.getElementById('combinedEmpName');
+            const empCodeInput = document.getElementById('combinedEmpCode');
+            const empRoleInput = document.getElementById('combinedEmpRole');
+            const hourlyRateInput = document.getElementById('combinedHourlyRate');
+            
+            empNameInput.addEventListener('change', function() {
+                const selectedName = this.value.trim();
+                if (!selectedName) return;
+                const savedData = localStorage.getItem(STORAGE_KEYS.EMP_DATA);
+                if (savedData) {
+                    const empArray = JSON.parse(savedData);
+                    const found = empArray.find(emp => emp.name === selectedName);
+                    if (found) {
+                        if (found.code) empCodeInput.value = found.code;
+                        if (found.role) empRoleInput.value = found.role;
+                        if (found.rate) hourlyRateInput.value = found.rate;
+                        addLog(`Auto-filled data for: ${selectedName}`, 'success');
+                    }
+                }
+            });
+        }
+        
+        function updateDatePreviews() {
+            const startDateRaw = document.getElementById('combinedStartDate').value;
+            const endDateRaw = document.getElementById('combinedEndDate').value;
+            const startPreview = document.getElementById('startDatePreview');
+            const endPreview = document.getElementById('endDatePreview');
+            
+            if (startDateRaw) {
+                const [year, month, day] = startDateRaw.split('-');
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                startPreview.textContent = `Will display as: ${months[parseInt(month)-1]} ${parseInt(day)}, ${year}`;
+            } else {
+                startPreview.textContent = '';
+            }
+            
+            if (endDateRaw) {
+                const [year, month, day] = endDateRaw.split('-');
+                const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                endPreview.textContent = `Will display as: ${months[parseInt(month)-1]} ${parseInt(day)}, ${year}`;
+            } else {
+                endPreview.textContent = '';
+            }
+        }
+        
+        function updateFacilityTotalWarning() {
+            const rateInputs = document.querySelectorAll('.facility-rate-input');
+            let total = 0;
+            rateInputs.forEach(input => {
+                total += parseFloat(input.value) || 0;
+            });
+            const warningDiv = document.getElementById('facilityTotalWarning');
+            if (Math.abs(total - 100) > 0.01) {
+                warningDiv.innerHTML = `⚠️ Total allocation: ${total}% (should be 100%)`;
+                warningDiv.style.color = '#f59e0b';
+            } else {
+                warningDiv.innerHTML = `✓ Total allocation: ${total}%`;
+                warningDiv.style.color = '#27ae60';
+            }
+        }
+        
+        function addFacilityRow() {
+            const tbody = document.getElementById('facilityTableBody');
+            const newId = nextFacilityId++;
+            const newRow = document.createElement('tr');
+            newRow.setAttribute('data-facility-id', newId);
+            newRow.innerHTML = `
+                <td class="facility-name-cell"><input type="text" class="facility-name-input" value="New Facility" style="width:140px;"></td>
+                <td><input type="number" class="facility-beds-input" value="0" step="1" style="width:100px;"></td>
+                <td><input type="number" class="facility-rate-input" value="0" step="1" min="0" max="100" style="width:100px;"></td>
+                <tr><button type="button" class="delete-facility-btn" onclick="deleteFacilityRow(this)">🗑️</button></td>
+            `;
+            tbody.appendChild(newRow);
+            attachFacilityInputListeners(newRow);
+            updateFacilityTotalWarning();
+            addLog('Added new facility row', 'info');
+        }
+        
+        function deleteFacilityRow(button) {
+            const row = button.closest('tr');
+            const tbody = document.getElementById('facilityTableBody');
+            if (tbody.children.length <= 1) {
+                addLog('Cannot delete the last facility row', 'warning');
+                return;
+            }
+            row.remove();
+            updateFacilityTotalWarning();
+            addLog('Removed facility row', 'info');
+        }
+        
+        function attachFacilityInputListeners(row) {
+            const rateInput = row.querySelector('.facility-rate-input');
+            if (rateInput) {
+                rateInput.addEventListener('input', updateFacilityTotalWarning);
+                rateInput.addEventListener('change', updateFacilityTotalWarning);
+            }
+            const bedsInput = row.querySelector('.facility-beds-input');
+            if (bedsInput) {
+                bedsInput.addEventListener('input', updateFacilityTotalWarning);
+            }
+        }
+        
+        function attachAllFacilityListeners() {
+            const allRows = document.querySelectorAll('#facilityTableBody tr');
+            allRows.forEach(row => attachFacilityInputListeners(row));
+            updateFacilityTotalWarning();
+        }
+        
+        function getFacilitiesData() {
+            const facilities = [];
+            const rows = document.querySelectorAll('#facilityTableBody tr');
+            rows.forEach(row => {
+                const nameInput = row.querySelector('.facility-name-input');
+                const bedsInput = row.querySelector('.facility-beds-input');
+                const rateInput = row.querySelector('.facility-rate-input');
+                if (nameInput && bedsInput && rateInput) {
+                    const name = nameInput.value.trim();
+                    const beds = bedsInput.value;
+                    const rate = parseFloat(rateInput.value) || 0;
+                    if (name) {
+                        facilities.push({ name: name, beds: beds, rate: rate });
+                    }
+                }
+            });
+            return facilities;
+        }
+        
+        function addLog(msg, type = 'info') {
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.textContent = new Date().toLocaleTimeString() + ' - ' + msg;
+            logs.appendChild(entry);
+            entry.scrollIntoView();
+        }
+        
+        function updateProgress(percent, msg) {
+            document.getElementById('progressFill').style.width = percent + '%';
+            document.getElementById('progressFill').textContent = percent + '%';
+            document.getElementById('status').textContent = msg;
+        }
+        
+        function openCombinedModal() { 
+            document.getElementById('combinedModal').style.display = 'block';
+            loadHistory();
+            updateDatePreviews();
+            attachAllFacilityListeners();
+            const startDateInput = document.getElementById('combinedStartDate');
+            const endDateInput = document.getElementById('combinedEndDate');
+            startDateInput.addEventListener('change', updateDatePreviews);
+            endDateInput.addEventListener('change', updateDatePreviews);
+        }
+        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function closePreviewModal() { document.getElementById('previewModal').style.display = 'none'; }
+        
+        function formatDateToDisplay(dateString) {
+            if (!dateString) return "";
+            const [year, month, day] = dateString.split('-');
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const monthName = months[parseInt(month) - 1];
+            const dayNum = parseInt(day);
+            return `${monthName} ${dayNum.toString().padStart(2, '0')}, ${year}`;
+        }
+        
+        function printReport() {
+            const reportHTML = document.getElementById('previewBody').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>HSM Timecard Invoice</title>
+                    <style>
+                        * { margin: 0; padding: 0; box-sizing: border-box; }
+                        body { 
+                            font-family: 'Segoe UI', 'Inter', system-ui, sans-serif; 
+                            background: white; 
+                            margin: 0; 
+                            padding: 0;
+                            -webkit-print-color-adjust: exact;
+                            print-color-adjust: exact;
+                        }
+                        .report-container { 
+                            max-width: 100%; 
+                            width: 100%; 
+                            margin: 0 auto; 
+                            background: white; 
+                        }
+                        .report-header-flex { 
+                            display: flex; 
+                            justify-content: space-between; 
+                            align-items: stretch;
+                            padding: 0 0 8px 0; 
+                            border-bottom: 2px solid #775995; 
+                        }
+                        .info-column { 
+                            display: flex; 
+                            flex-direction: column; 
+                            justify-content: space-between;
+                            gap: 4px; 
+                        }
+                        .info-row { 
+                            display: flex; 
+                            align-items: baseline; 
+                            gap: 12px; 
+                            font-size: 11px; 
+                            line-height: 1.2; 
+                        }
+                        .info-label { 
+                            font-weight: 700; 
+                            min-width: 75px; 
+                        }
+                        .info-value { 
+                            color: #1f2a3e; 
+                        }
+                        .logo-area { 
+                            display: flex;
+                            align-items: center;
+                            justify-content: flex-end;
+                        }
+                        .logo-img { 
+                            max-height: 60px;
+                            width: auto;
+                            height: auto;
+                            object-fit: contain;
+                        }
+                        .table-section { 
+                            padding: 6px 0; 
+                        }
+                        .timecard-table { 
+                            width: 100%; 
+                            border-collapse: collapse; 
+                            font-size: 10px; 
+                        }
+                        .timecard-table th { 
+                            background: #775995; 
+                            color: white; 
+                            padding: 6px 5px; 
+                            border: 1px solid #8a6aa5; 
+                            text-align: center; 
+                        }
+                        .timecard-table td { 
+                            padding: 6px 5px; 
+                            border-bottom: 1px solid #e2e8f0; 
+                            border-left: 1px solid #f0f0f0; 
+                            border-right: 1px solid #f0f0f0; 
+                            text-align: center; 
+                        }
+                        .timecard-table td:first-child { 
+                            text-align: left; 
+                        }
+                        .summary-section { 
+                            padding: 6px 0 0 0; 
+                            display: flex; 
+                            justify-content: flex-end; 
+                        }
+                        .summary-card { 
+                            width: 320px; 
+                            border: 1px solid #e2e8f0; 
+                            overflow: hidden; 
+                        }
+                        .facility-header { 
+                            background: #775995; 
+                            color: white; 
+                            padding: 6px 12px; 
+                            text-align: center; 
+                            font-weight: 700; 
+                            font-size: 9.5px; 
+                        }
+                        .facility-item { 
+                            display: flex; 
+                            justify-content: space-between; 
+                            padding: 5px 12px; 
+                            border-bottom: 1px solid #edf2f7; 
+                            font-size: 9px; 
+                        }
+                        .facility-name { 
+                            font-weight: 700; 
+                        }
+                        .facility-detail { 
+                            display: flex; 
+                            gap: 15px; 
+                        }
+                        .facility-detail span { 
+                            min-width: 48px; 
+                            text-align: right; 
+                        }
+                        .total-block { 
+                            padding: 6px 12px; 
+                            border-top: 2px solid #775995; 
+                        }
+                        .summary-row { 
+                            display: flex; 
+                            justify-content: space-between; 
+                            padding: 4px 0; 
+                            font-size: 9px; 
+                        }
+                        .summary-label { 
+                            font-weight: 700; 
+                        }
+                        .total-row { 
+                            display: flex; 
+                            justify-content: space-between; 
+                            padding: 6px 0 2px 0; 
+                            font-weight: 800; 
+                            font-size: 10px; 
+                            border-top: 1px dashed #cbd5e1; 
+                            margin-top: 3px; 
+                        }
+                        @page { 
+                            size: Letter; 
+                            margin: 0.5in 0.5in;
+                            zoom: 82%;
+                        }
+                        @media print {
+                            body { 
+                                margin: 0; 
+                                padding: 0; 
+                                zoom: 82%;
+                            }
+                            .timecard-table th { 
+                                background: #775995 !important; 
+                                -webkit-print-color-adjust: exact; 
+                                print-color-adjust: exact; 
+                            }
+                            .facility-header { 
+                                background: #775995 !important; 
+                                -webkit-print-color-adjust: exact; 
+                                print-color-adjust: exact; 
+                            }
+                            .preview-header, .preview-actions, .preview-modal, .modal, .header, .progress-bar, .logs, .single-card-wrapper {
+                                display: none;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>${reportHTML}</body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+        
+        function parseManilaTimeToMinutes(timeStr) { if (!timeStr) return null; const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i); if (!match) return null; let hours = parseInt(match[1]); const minutes = parseInt(match[2]); const isPM = match[3].toUpperCase() === 'PM'; if (isPM && hours !== 12) hours += 12; if (!isPM && hours === 12) hours = 0; return hours * 60 + minutes; }
+        function calculateHoursDifference(startTimeStr, endTimeStr) { const start = parseManilaTimeToMinutes(startTimeStr); const end = parseManilaTimeToMinutes(endTimeStr); if (start === null || end === null) return 0; let diff = end - start; if (diff < 0) diff += 24 * 60; if (diff > 24 * 60) diff = 24 * 60; return diff / 60; }
+        function convertManilaToEastern(manilaTimeStr, dateStr) { if (!manilaTimeStr) return ''; const timeMatch = manilaTimeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i); if (!timeMatch) return ''; let hours = parseInt(timeMatch[1]); const minutes = parseInt(timeMatch[2]); const isPM = timeMatch[3].toUpperCase() === 'PM'; if (isPM && hours !== 12) hours += 12; if (!isPM && hours === 12) hours = 0; let year = 2026, month = 3, day = 1; const dateMatch = dateStr.match(/(\d{4})\/(\d{2})\/(\d{2})/); if (dateMatch) { year = parseInt(dateMatch[1]); month = parseInt(dateMatch[2]) - 1; day = parseInt(dateMatch[3]); } const manilaDate = new Date(Date.UTC(year, month, day, hours, minutes, 0)); const utcDate = new Date(manilaDate); utcDate.setUTCHours(utcDate.getUTCHours() - 8); const isDST = (month > 2) && (month < 10); const easternOffset = isDST ? 4 : 5; const easternDate = new Date(utcDate); easternDate.setUTCHours(easternDate.getUTCHours() - easternOffset); let easternHours = easternDate.getUTCHours(); const easternMinutes = easternDate.getUTCMinutes(); const easternAmpm = easternHours >= 12 ? 'PM' : 'AM'; easternHours = easternHours % 12; easternHours = easternHours ? easternHours : 12; return `${easternHours}:${easternMinutes.toString().padStart(2, '0')} ${easternAmpm}`; }
+        function parseLineToCells(line, delimiter) { const cells = []; let current = ''; let inQuotes = false; for (let i = 0; i < line.length; i++) { const char = line[i]; if (char === '"') inQuotes = !inQuotes; else if (char === delimiter && !inQuotes) { cells.push(current.trim()); current = ''; } else current += char; } cells.push(current.trim()); return cells; }
+        function detectDelimiter(line) { if (line.includes('\t')) return '\t'; return ','; }
+        
+        function convertExcelToCSV(file, callback) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const csv = XLSX.utils.sheet_to_csv(firstSheet);
+                    callback(csv);
+                } catch (error) {
+                    addLog('Error converting Excel file: ' + error.message, 'error');
+                    callback(null);
+                }
+            };
+            reader.onerror = function() { addLog('Error reading file', 'error'); callback(null); };
+            reader.readAsArrayBuffer(file);
+        }
+        
+        function selectSourceFileCombined() {
+            const input = document.createElement('input'); 
+            input.type = 'file'; 
+            input.accept = '.xlsx, .xls';
+            input.onchange = function(e) { 
+                const file = e.target.files[0]; 
+                if (!file) return; 
+                selectedSourceFileObj = file; 
+                document.getElementById('combinedSourceFileName').style.display = 'block'; 
+                document.getElementById('combinedSourceFileName').innerHTML = '📄 Selected: ' + file.name; 
+                addLog('Selected Excel file: ' + file.name); 
+                addLog('Converting Excel to CSV...', 'info');
+                convertExcelToCSV(file, function(csvContent) {
+                    if (csvContent) {
+                        addLog('Excel converted to CSV successfully', 'success');
+                        parseRawAttendanceCSVCombined(csvContent);
+                    } else {
+                        addLog('Failed to convert Excel file', 'error');
+                    }
+                });
+            };
+            input.click();
+        }
+        
+        function renderEditableTable(timecardRows) {
+            let tableHtml = '<table class="editable-table" id="editableTimecardTable"><thead><tr>';
+            tableHtml += '<th>Day</th><th>Clock In (EST)</th><th>Clock Out (EST)</th><th>Total Hours</th><th>Break Hours</th><th>Billed Hours</th>';
+            tableHtml += '</thead><tbody>';
+            
+            for (let i = 0; i < timecardRows.length; i++) {
+                const r = timecardRows[i];
+                tableHtml += `<tr data-rowindex="${i}">
+                    <td style="white-space:nowrap;">${escapeHtml(r.day)}</td>
+                    <td style="text-align:center;">${r.clockIn || '-'}</td>
+                    <td style="text-align:center;">${r.clockOut || '-'}</td>
+                    <td style="text-align:center;">${r.totalHours.toFixed(2)}</td>
+                    <td style="text-align:center;">
+                        <input type="number" step="0.25" value="${r.breakHours.toFixed(2)}" class="break-input" data-row="${i}" style="width:70px;">
+                    </td>
+                    <td style="text-align:center;" class="billed-cell" id="billed_${i}">${r.billedHours.toFixed(2)}</td>
+                 </tr>`;
+            }
+            tableHtml += '</tbody></table>';
+            document.getElementById('combinedPreviewData').innerHTML = tableHtml;
+            
+            const breakInputs = document.querySelectorAll('.break-input');
+            breakInputs.forEach(input => {
+                input.addEventListener('change', function() {
+                    const rowIdx = parseInt(this.getAttribute('data-row'));
+                    const newBreakHours = parseFloat(this.value) || 0;
+                    const row = combinedCleanedData[rowIdx];
+                    if (row) {
+                        row.breakHours = newBreakHours;
+                        const newBilled = Math.max(0, row.totalHours - newBreakHours);
+                        row.billedHours = newBilled;
+                        document.getElementById(`billed_${rowIdx}`).textContent = newBilled.toFixed(2);
+                        addLog(`Updated row ${rowIdx + 1}: Break = ${newBreakHours.toFixed(2)}, Billed = ${newBilled.toFixed(2)}`, 'info');
+                    }
+                });
+            });
+        }
+        
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+        
+        function parseRawAttendanceCSVCombined(content) {
+            const lines = content.split(/\r?\n/); const timecardRows = []; let headers = [], headerRowIndex = -1, dateColIdx = -1, startTimeColIdx = -1, endTimeColIdx = -1, midbreakColIdx = -1, attendanceTypeColIdx = -1; let delimiter = '\t'; const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            for (let i = 0; i < Math.min(10, lines.length); i++) { const line = lines[i].trim(); if (line) { delimiter = detectDelimiter(line); addLog(`Detected delimiter: ${delimiter === '\t' ? 'TAB' : 'COMMA'}`, 'info'); break; } }
+            for (let i = 0; i < Math.min(30, lines.length); i++) { const line = lines[i].trim(); if (!line) continue; const cells = parseLineToCells(line, delimiter); const hasDate = cells.some(c => c.toLowerCase().includes('date')); const hasStartTime = cells.some(c => c.toLowerCase().includes('start time')); const hasEndTime = cells.some(c => c.toLowerCase().includes('end time')); if (hasDate && hasStartTime && hasEndTime) { headerRowIndex = i; headers = cells.map(c => c.replace(/^"|"$/g, '').toLowerCase().trim()); addLog(`Found header row at line ${i+1}`, 'success'); break; } }
+            if (headerRowIndex === -1) { addLog('Could not find header row', 'error'); return; }
+            for (let i = 0; i < headers.length; i++) { const h = headers[i]; if (h === 'date' || h.includes('date')) dateColIdx = i; if (h === 'start time' || h.includes('start time')) startTimeColIdx = i; if (h === 'end time' || h.includes('end time')) endTimeColIdx = i; if (h === 'midbreak (mins)' || h.includes('midbreak')) midbreakColIdx = i; if (h === 'attendance type' || h.includes('attendance type')) attendanceTypeColIdx = i; }
+            if (dateColIdx === -1 || startTimeColIdx === -1 || endTimeColIdx === -1) { addLog('Required columns missing', 'error'); return; }
+            for (let i = headerRowIndex+1; i < lines.length; i++) { const line = lines[i].trim(); if (!line) continue; const cells = parseLineToCells(line, delimiter); if (cells.length <= Math.max(dateColIdx, startTimeColIdx, endTimeColIdx)) continue; const rawDate = cells[0].replace(/^"|"$/g, '').trim(); const dateMatch = rawDate.match(/(\d{4})\/(\d{2})\/(\d{2})/); if (!dateMatch) continue; const year = parseInt(dateMatch[1]), month = parseInt(dateMatch[2]), day = parseInt(dateMatch[3]); const monthName = monthNames[month-1]; const dateObj = new Date(year, month-1, day); const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); const formattedDate = `${dayOfWeek}, ${monthName} ${day.toString().padStart(2,'0')}`; let startTime = cells[startTimeColIdx] ? cells[startTimeColIdx].replace(/^"|"$/g, '').trim() : ''; let endTime = cells[endTimeColIdx] ? cells[endTimeColIdx].replace(/^"|"$/g, '').trim() : ''; const attendanceType = (attendanceTypeColIdx !== -1 && cells[attendanceTypeColIdx]) ? cells[attendanceTypeColIdx].replace(/^"|"$/g, '').trim().toLowerCase() : ''; if (attendanceType === 'absent' || !startTime) { timecardRows.push({ day: formattedDate, clockIn: '', clockOut: '', totalHours: 0, breakHours: 0, billedHours: 0 }); continue; } let totalHours = calculateHoursDifference(startTime, endTime); let breakHours = 0; if (midbreakColIdx !== -1 && cells[midbreakColIdx]) { const midbreakMins = parseFloat(cells[midbreakColIdx].replace(/^"|"$/g, '')) || 0; breakHours = midbreakMins / 60; } if (breakHours === 0 && totalHours > 0) breakHours = 1.00; const billedHours = Math.max(0, totalHours - breakHours); const easternStart = convertManilaToEastern(startTime, rawDate); const easternEnd = convertManilaToEastern(endTime, rawDate); timecardRows.push({ day: formattedDate, clockIn: easternStart, clockOut: easternEnd, totalHours, breakHours, billedHours }); }
+            if (timecardRows.length > 0) { 
+                combinedCleanedData = timecardRows; 
+                addLog(`Parsed ${timecardRows.length} records`, 'success'); 
+                renderEditableTable(timecardRows);
+                document.getElementById('combinedFoundInfo').style.display = 'block'; 
+                document.getElementById('combinedFoundInfo').innerHTML = `✅ Converted ${timecardRows.length} records. You can edit Break Hours in the table above.`; 
+            } else { 
+                addLog('No valid attendance records', 'error'); 
+            }
+        }
+        
+        function processCombinedAndGenerate() {
+            const empName = document.getElementById('combinedEmpName').value.trim();
+            const empCode = document.getElementById('combinedEmpCode').value.trim();
+            const hourlyRate = parseFloat(document.getElementById('combinedHourlyRate').value);
+            const empRole = document.getElementById('combinedEmpRole').value.trim();
+            const clientName = document.getElementById('combinedClientName').value.trim() || "Ocean Healthcare";
+            
+            const facilities = getFacilitiesData();
+            
+            if (facilities.length === 0) {
+                addLog('Please add at least one facility', 'error');
+                return;
+            }
+            
+            let startDateRaw = document.getElementById('combinedStartDate').value;
+            let endDateRaw = document.getElementById('combinedEndDate').value;
+            const startDate = startDateRaw ? formatDateToDisplay(startDateRaw) : "Apr 01, 2026";
+            const endDate = endDateRaw ? formatDateToDisplay(endDateRaw) : "Apr 30, 2026";
+            
+            if(!empName || !empCode || isNaN(hourlyRate)){ addLog('Please fill Employee Name, Code, and Hourly Rate', 'error'); return; }
+            if(combinedCleanedData.length === 0){ addLog('Please load attendance Excel file first', 'error'); return; }
+            
+            saveEmployeeData(empName, empCode, hourlyRate, empRole);
+            
+            addLog('Generating timecard report...');
+            updateProgress(30, 'Creating professional HTML report...');
+            
+            let totalBilledHours = 0;
+            for (let row of combinedCleanedData) totalBilledHours += row.billedHours;
+            const totalBillRaw = totalBilledHours * hourlyRate;
+            const totalBill = totalBillRaw.toFixed(2);
+            
+            let totalRate = 0;
+            facilities.forEach(fac => { totalRate += fac.rate; });
+            if (Math.abs(totalRate - 100) > 0.01) {
+                addLog(`Warning: Total percentage is ${totalRate}%, not 100%. Amounts may not sum correctly.`, 'warning');
+            }
+            
+            const logoPath = 'img/hsm_logo.png';
+            
+            let facilitiesHtml = '';
+            facilities.forEach(fac => {
+                const amount = (totalBillRaw * (fac.rate / 100)).toFixed(2);
+                facilitiesHtml += `
+                    <div class="facility-item">
+                        <span class="facility-name">${escapeHtml(fac.name)}</span>
+                        <div class="facility-detail">
+                            <span>${fac.beds} beds</span>
+                            <span>${fac.rate}%</span>
+                            <span>$${amount}</span>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            const reportHTML = `
+                <div class="report-container">
+                    <div class="report-header-flex">
+                        <div class="info-column">
+                            <div class="info-row"><span class="info-label">Client:</span><span class="info-value">${escapeHtml(clientName)}</span></div>
+                            <div class="info-row"><span class="info-label">Employee:</span><span class="info-value">${escapeHtml(empName)} (${escapeHtml(empCode)})</span></div>
+                            <div class="info-row"><span class="info-label">Role:</span><span class="info-value">${escapeHtml(empRole || 'Healthcare Staff')}</span></div>
+                            <div class="info-row"><span class="info-label">Hourly Rate:</span><span class="info-value">$${hourlyRate.toFixed(2)}</span></div>
+                            <div class="info-row"><span class="info-label">Work Period:</span><span class="info-value">${escapeHtml(startDate)} — ${escapeHtml(endDate)}</span></div>
+                        </div>
+                        <div class="logo-area">
+                            <img class="logo-img" src="${logoPath}" alt="HSM Logo" onerror="this.style.display='none';">
+                        </div>
+                    </div>
+                    <div class="table-section">
+                        <table class="timecard-table">
+                            <thead>
+                                <tr><th>Day</th><th>Clock In (EST)</th><th>Clock Out (EST)</th><th>Total Hours</th><th>Break Hours</th><th>Billed Hours</th></tr>
+                            </thead>
+                            <tbody>
+                                ${combinedCleanedData.map(row => `
+                                    <tr>
+                                        <td style="white-space:nowrap; text-align:left;">${escapeHtml(row.day)}</td>
+                                        <td style="text-align:center;">${row.clockIn || '-'}</td>
+                                        <td style="text-align:center;">${row.clockOut || '-'}</td>
+                                        <td style="text-align:center;">${row.totalHours.toFixed(2)}</td>
+                                        <td style="text-align:center;">${row.breakHours.toFixed(2)}</td>
+                                        <td style="text-align:center;"><strong>${row.billedHours.toFixed(2)}</strong></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="summary-section">
+                        <div class="summary-card">
+                            <div class="facility-header">FACILITY ALLOCATION (#Beds)</div>
+                            ${facilitiesHtml}
+                            <div class="total-block">
+                                <div class="summary-row"><span class="summary-label">BILLABLE HOURS</span><span>${totalBilledHours.toFixed(2)}</span></div>
+                                <div class="summary-row"><span class="summary-label">HOURLY RATE</span><span>$${hourlyRate.toFixed(2)}</span></div>
+                                <div class="total-row"><span>TOTAL BILL</span><span>$${totalBill}</span></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('previewBody').innerHTML = reportHTML;
+            document.getElementById('previewModal').style.display = 'block';
+            updateProgress(100, 'Complete!');
+            addLog('✅ Professional HTML report (Letter size with normal margins) generated!', 'success');
+            addLog(`💰 Total Bill: $${totalBill}`, 'success');
+            updateProgress(0, 'Ready');
+            setTimeout(() => { closeModal('combinedModal'); }, 1000);
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadHistory();
+            setupAutoFill();
+            updateDatePreviews();
+            attachAllFacilityListeners();
+            const startDateInput = document.getElementById('combinedStartDate');
+            const endDateInput = document.getElementById('combinedEndDate');
+            if (startDateInput) startDateInput.addEventListener('change', updateDatePreviews);
+            if (endDateInput) endDateInput.addEventListener('change', updateDatePreviews);
+        });
+    </script>
+</body>
+</html>
