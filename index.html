@@ -966,7 +966,7 @@
                 <td class="facility-name-cell"><input type="text" class="facility-name-input" value="New Facility" style="width:140px;"></td>
                 <td><input type="number" class="facility-beds-input" value="0" step="1" style="width:100px;"></td>
                 <td><input type="number" class="facility-rate-input" value="0" step="1" min="0" max="100" style="width:100px;"></td>
-                <tr><button type="button" class="delete-facility-btn" onclick="deleteFacilityRow(this)">🗑️</button></td>
+                <td><button type="button" class="delete-facility-btn" onclick="deleteFacilityRow(this)">🗑️</button></td>
             `;
             tbody.appendChild(newRow);
             attachFacilityInputListeners(newRow);
@@ -1392,7 +1392,8 @@
                 addLog(`Warning: Total percentage is ${totalRate}%, not 100%. Amounts may not sum correctly.`, 'warning');
             }
             
-            const logoPath = 'img/hsm_logo.png';
+            // Updated logo URL
+            const logoPath = 'https://i.imgur.com/ZTxWngn.png';
             
             let facilitiesHtml = '';
             facilities.forEach(fac => {
@@ -1476,4 +1477,4 @@
         });
     </script>
 </body>
-</html>
+                                       </html>
