@@ -949,10 +949,10 @@
             });
             const warningDiv = document.getElementById('facilityTotalWarning');
             if (Math.abs(total - 100) > 0.01) {
-                warningDiv.innerHTML = `⚠️ Total allocation: ${total}% (should be 100%)`;
+                warningDiv.innerHTML = `⚠️ Total allocation: ${total.toFixed(1)}% (should be 100%)`;
                 warningDiv.style.color = '#f59e0b';
             } else {
-                warningDiv.innerHTML = `✓ Total allocation: ${total}%`;
+                warningDiv.innerHTML = `✓ Total allocation: ${total.toFixed(1)}%`;
                 warningDiv.style.color = '#27ae60';
             }
         }
@@ -1288,9 +1288,14 @@
         }
         
         function renderEditableTable(timecardRows) {
+            if (!timecardRows || timecardRows.length === 0) {
+                document.getElementById('combinedPreviewData').innerHTML = '<p style="padding: 15px; color: #666;">No data to display. Please upload an Excel file.</p>';
+                return;
+            }
+            
             let tableHtml = '<table class="editable-table" id="editableTimecardTable"><thead><tr>';
             tableHtml += '<th>Day</th><th>Clock In (EST)</th><th>Clock Out (EST)</th><th>Total Hours</th><th>Break Hours</th><th>Billed Hours</th>';
-            tableHtml += '</thead><tbody>';
+            tableHtml += '</tr></thead><tbody>';
             
             for (let i = 0; i < timecardRows.length; i++) {
                 const r = timecardRows[i];
@@ -1327,7 +1332,7 @@
         
         function escapeHtml(str) {
             if (!str) return '';
-            return str.replace(/[&<>]/g, function(m) {
+            return String(str).replace(/[&<>]/g, function(m) {
                 if (m === '&') return '&amp;';
                 if (m === '<') return '&lt;';
                 if (m === '>') return '&gt;';
@@ -1336,13 +1341,88 @@
         }
         
         function parseRawAttendanceCSVCombined(content) {
-            const lines = content.split(/\r?\n/); const timecardRows = []; let headers = [], headerRowIndex = -1, dateColIdx = -1, startTimeColIdx = -1, endTimeColIdx = -1, midbreakColIdx = -1, attendanceTypeColIdx = -1; let delimiter = '\t'; const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            for (let i = 0; i < Math.min(10, lines.length); i++) { const line = lines[i].trim(); if (line) { delimiter = detectDelimiter(line); addLog(`Detected delimiter: ${delimiter === '\t' ? 'TAB' : 'COMMA'}`, 'info'); break; } }
-            for (let i = 0; i < Math.min(30, lines.length); i++) { const line = lines[i].trim(); if (!line) continue; const cells = parseLineToCells(line, delimiter); const hasDate = cells.some(c => c.toLowerCase().includes('date')); const hasStartTime = cells.some(c => c.toLowerCase().includes('start time')); const hasEndTime = cells.some(c => c.toLowerCase().includes('end time')); if (hasDate && hasStartTime && hasEndTime) { headerRowIndex = i; headers = cells.map(c => c.replace(/^"|"$/g, '').toLowerCase().trim()); addLog(`Found header row at line ${i+1}`, 'success'); break; } }
-            if (headerRowIndex === -1) { addLog('Could not find header row', 'error'); return; }
-            for (let i = 0; i < headers.length; i++) { const h = headers[i]; if (h === 'date' || h.includes('date')) dateColIdx = i; if (h === 'start time' || h.includes('start time')) startTimeColIdx = i; if (h === 'end time' || h.includes('end time')) endTimeColIdx = i; if (h === 'midbreak (mins)' || h.includes('midbreak')) midbreakColIdx = i; if (h === 'attendance type' || h.includes('attendance type')) attendanceTypeColIdx = i; }
-            if (dateColIdx === -1 || startTimeColIdx === -1 || endTimeColIdx === -1) { addLog('Required columns missing', 'error'); return; }
-            for (let i = headerRowIndex+1; i < lines.length; i++) { const line = lines[i].trim(); if (!line) continue; const cells = parseLineToCells(line, delimiter); if (cells.length <= Math.max(dateColIdx, startTimeColIdx, endTimeColIdx)) continue; const rawDate = cells[0].replace(/^"|"$/g, '').trim(); const dateMatch = rawDate.match(/(\d{4})\/(\d{2})\/(\d{2})/); if (!dateMatch) continue; const year = parseInt(dateMatch[1]), month = parseInt(dateMatch[2]), day = parseInt(dateMatch[3]); const monthName = monthNames[month-1]; const dateObj = new Date(year, month-1, day); const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); const formattedDate = `${dayOfWeek}, ${monthName} ${day.toString().padStart(2,'0')}`; let startTime = cells[startTimeColIdx] ? cells[startTimeColIdx].replace(/^"|"$/g, '').trim() : ''; let endTime = cells[endTimeColIdx] ? cells[endTimeColIdx].replace(/^"|"$/g, '').trim() : ''; const attendanceType = (attendanceTypeColIdx !== -1 && cells[attendanceTypeColIdx]) ? cells[attendanceTypeColIdx].replace(/^"|"$/g, '').trim().toLowerCase() : ''; if (attendanceType === 'absent' || !startTime) { timecardRows.push({ day: formattedDate, clockIn: '', clockOut: '', totalHours: 0, breakHours: 0, billedHours: 0 }); continue; } let totalHours = calculateHoursDifference(startTime, endTime); let breakHours = 0; if (midbreakColIdx !== -1 && cells[midbreakColIdx]) { const midbreakMins = parseFloat(cells[midbreakColIdx].replace(/^"|"$/g, '')) || 0; breakHours = midbreakMins / 60; } if (breakHours === 0 && totalHours > 0) breakHours = 1.00; const billedHours = Math.max(0, totalHours - breakHours); const easternStart = convertManilaToEastern(startTime, rawDate); const easternEnd = convertManilaToEastern(endTime, rawDate); timecardRows.push({ day: formattedDate, clockIn: easternStart, clockOut: easternEnd, totalHours, breakHours, billedHours }); }
+            const lines = content.split(/\r?\n/); 
+            const timecardRows = []; 
+            let headers = [], headerRowIndex = -1, dateColIdx = -1, startTimeColIdx = -1, endTimeColIdx = -1, midbreakColIdx = -1, attendanceTypeColIdx = -1; 
+            let delimiter = '\t'; 
+            const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            
+            for (let i = 0; i < Math.min(10, lines.length); i++) { 
+                const line = lines[i].trim(); 
+                if (line) { 
+                    delimiter = detectDelimiter(line); 
+                    addLog(`Detected delimiter: ${delimiter === '\t' ? 'TAB' : 'COMMA'}`, 'info'); 
+                    break; 
+                } 
+            }
+            
+            for (let i = 0; i < Math.min(30, lines.length); i++) { 
+                const line = lines[i].trim(); 
+                if (!line) continue; 
+                const cells = parseLineToCells(line, delimiter); 
+                const hasDate = cells.some(c => c.toLowerCase().includes('date')); 
+                const hasStartTime = cells.some(c => c.toLowerCase().includes('start time')); 
+                const hasEndTime = cells.some(c => c.toLowerCase().includes('end time')); 
+                if (hasDate && hasStartTime && hasEndTime) { 
+                    headerRowIndex = i; 
+                    headers = cells.map(c => c.replace(/^"|"$/g, '').toLowerCase().trim()); 
+                    addLog(`Found header row at line ${i+1}`, 'success'); 
+                    break; 
+                } 
+            }
+            
+            if (headerRowIndex === -1) { 
+                addLog('Could not find header row', 'error'); 
+                return; 
+            }
+            
+            for (let i = 0; i < headers.length; i++) { 
+                const h = headers[i]; 
+                if (h === 'date' || h.includes('date')) dateColIdx = i; 
+                if (h === 'start time' || h.includes('start time')) startTimeColIdx = i; 
+                if (h === 'end time' || h.includes('end time')) endTimeColIdx = i; 
+                if (h === 'midbreak (mins)' || h.includes('midbreak')) midbreakColIdx = i; 
+                if (h === 'attendance type' || h.includes('attendance type')) attendanceTypeColIdx = i; 
+            }
+            
+            if (dateColIdx === -1 || startTimeColIdx === -1 || endTimeColIdx === -1) { 
+                addLog('Required columns missing', 'error'); 
+                return; 
+            }
+            
+            for (let i = headerRowIndex+1; i < lines.length; i++) { 
+                const line = lines[i].trim(); 
+                if (!line) continue; 
+                const cells = parseLineToCells(line, delimiter); 
+                if (cells.length <= Math.max(dateColIdx, startTimeColIdx, endTimeColIdx)) continue; 
+                const rawDate = cells[0].replace(/^"|"$/g, '').trim(); 
+                const dateMatch = rawDate.match(/(\d{4})\/(\d{2})\/(\d{2})/); 
+                if (!dateMatch) continue; 
+                const year = parseInt(dateMatch[1]), month = parseInt(dateMatch[2]), day = parseInt(dateMatch[3]); 
+                const monthName = monthNames[month-1]; 
+                const dateObj = new Date(year, month-1, day); 
+                const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'short' }); 
+                const formattedDate = `${dayOfWeek}, ${monthName} ${day.toString().padStart(2,'0')}`; 
+                let startTime = cells[startTimeColIdx] ? cells[startTimeColIdx].replace(/^"|"$/g, '').trim() : ''; 
+                let endTime = cells[endTimeColIdx] ? cells[endTimeColIdx].replace(/^"|"$/g, '').trim() : ''; 
+                const attendanceType = (attendanceTypeColIdx !== -1 && cells[attendanceTypeColIdx]) ? cells[attendanceTypeColIdx].replace(/^"|"$/g, '').trim().toLowerCase() : ''; 
+                if (attendanceType === 'absent' || !startTime) { 
+                    timecardRows.push({ day: formattedDate, clockIn: '', clockOut: '', totalHours: 0, breakHours: 0, billedHours: 0 }); 
+                    continue; 
+                } 
+                let totalHours = calculateHoursDifference(startTime, endTime); 
+                let breakHours = 0; 
+                if (midbreakColIdx !== -1 && cells[midbreakColIdx]) { 
+                    const midbreakMins = parseFloat(cells[midbreakColIdx].replace(/^"|"$/g, '')) || 0; 
+                    breakHours = midbreakMins / 60; 
+                } 
+                if (breakHours === 0 && totalHours > 0) breakHours = 1.00; 
+                const billedHours = Math.max(0, totalHours - breakHours); 
+                const easternStart = convertManilaToEastern(startTime, rawDate); 
+                const easternEnd = convertManilaToEastern(endTime, rawDate); 
+                timecardRows.push({ day: formattedDate, clockIn: easternStart, clockOut: easternEnd, totalHours, breakHours, billedHours }); 
+            }
+            
             if (timecardRows.length > 0) { 
                 combinedCleanedData = timecardRows; 
                 addLog(`Parsed ${timecardRows.length} records`, 'success'); 
@@ -1351,20 +1431,49 @@
                 document.getElementById('combinedFoundInfo').innerHTML = `✅ Converted ${timecardRows.length} records. You can edit Break Hours in the table above.`; 
             } else { 
                 addLog('No valid attendance records', 'error'); 
+                document.getElementById('combinedFoundInfo').style.display = 'block';
+                document.getElementById('combinedFoundInfo').innerHTML = '⚠️ No valid records found in the file. Please check the format.';
+                document.getElementById('combinedFoundInfo').style.background = '#fff3cd';
+                document.getElementById('combinedFoundInfo').style.color = '#856404';
             }
         }
         
         function processCombinedAndGenerate() {
+            // Check if data is loaded
+            if (combinedCleanedData.length === 0) {
+                addLog('❌ Please load attendance Excel file first', 'error');
+                alert('Please upload an attendance Excel file first.');
+                return;
+            }
+            
             const empName = document.getElementById('combinedEmpName').value.trim();
             const empCode = document.getElementById('combinedEmpCode').value.trim();
             const hourlyRate = parseFloat(document.getElementById('combinedHourlyRate').value);
             const empRole = document.getElementById('combinedEmpRole').value.trim();
             const clientName = document.getElementById('combinedClientName').value.trim() || "Ocean Healthcare";
             
+            // Validate required fields
+            if (!empName) {
+                addLog('❌ Please enter Employee Name', 'error');
+                alert('Please enter Employee Name.');
+                return;
+            }
+            if (!empCode) {
+                addLog('❌ Please enter Employee Code', 'error');
+                alert('Please enter Employee Code.');
+                return;
+            }
+            if (isNaN(hourlyRate) || hourlyRate <= 0) {
+                addLog('❌ Please enter a valid Hourly Rate', 'error');
+                alert('Please enter a valid Hourly Rate.');
+                return;
+            }
+            
             const facilities = getFacilitiesData();
             
             if (facilities.length === 0) {
-                addLog('Please add at least one facility', 'error');
+                addLog('❌ Please add at least one facility', 'error');
+                alert('Please add at least one facility.');
                 return;
             }
             
@@ -1373,23 +1482,22 @@
             const startDate = startDateRaw ? formatDateToDisplay(startDateRaw) : "Apr 01, 2026";
             const endDate = endDateRaw ? formatDateToDisplay(endDateRaw) : "Apr 30, 2026";
             
-            if(!empName || !empCode || isNaN(hourlyRate)){ addLog('Please fill Employee Name, Code, and Hourly Rate', 'error'); return; }
-            if(combinedCleanedData.length === 0){ addLog('Please load attendance Excel file first', 'error'); return; }
-            
             saveEmployeeData(empName, empCode, hourlyRate, empRole);
             
             addLog('Generating timecard report...');
             updateProgress(30, 'Creating professional HTML report...');
             
             let totalBilledHours = 0;
-            for (let row of combinedCleanedData) totalBilledHours += row.billedHours;
+            for (let row of combinedCleanedData) {
+                totalBilledHours += row.billedHours;
+            }
             const totalBillRaw = totalBilledHours * hourlyRate;
             const totalBill = totalBillRaw.toFixed(2);
             
             let totalRate = 0;
             facilities.forEach(fac => { totalRate += fac.rate; });
             if (Math.abs(totalRate - 100) > 0.01) {
-                addLog(`Warning: Total percentage is ${totalRate}%, not 100%. Amounts may not sum correctly.`, 'warning');
+                addLog(`⚠️ Warning: Total percentage is ${totalRate.toFixed(1)}%, not 100%. Amounts may not sum correctly.`, 'warning');
             }
             
             // Updated logo URL
@@ -1456,13 +1564,18 @@
                     </div>
                 </div>
             `;
+            
             document.getElementById('previewBody').innerHTML = reportHTML;
             document.getElementById('previewModal').style.display = 'block';
             updateProgress(100, 'Complete!');
             addLog('✅ Professional HTML report (Letter size with normal margins) generated!', 'success');
             addLog(`💰 Total Bill: $${totalBill}`, 'success');
             updateProgress(0, 'Ready');
-            setTimeout(() => { closeModal('combinedModal'); }, 1000);
+            
+            // Close the modal after a short delay
+            setTimeout(() => { 
+                closeModal('combinedModal'); 
+            }, 1000);
         }
         
         document.addEventListener('DOMContentLoaded', function() {
@@ -1474,7 +1587,15 @@
             const endDateInput = document.getElementById('combinedEndDate');
             if (startDateInput) startDateInput.addEventListener('change', updateDatePreviews);
             if (endDateInput) endDateInput.addEventListener('change', updateDatePreviews);
+            
+            // Add a click handler for the Generate Final Report button as a backup
+            const generateBtn = document.querySelector('#combinedModal button[onclick="processCombinedAndGenerate()"]');
+            if (generateBtn) {
+                generateBtn.addEventListener('click', function(e) {
+                    processCombinedAndGenerate();
+                });
+            }
         });
     </script>
 </body>
-                                       </html>
+</html>
